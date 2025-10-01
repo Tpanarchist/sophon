@@ -37,6 +37,10 @@ class Registry:
     def add(self, op: Op):
         self._ops[op.name] = op
 
+    def ops(self) -> List[Op]:
+        """Return list of registered ops."""
+        return list(self._ops.values())
+
     def candidates(self, name: Optional[str] = None, graph: Optional[HyperGraph] = None) -> List[Tuple[Op, Tuple[Any, ...]]]:
         """
         Enumerate all (op, valid_input_tuple) pairs for all registered ops.

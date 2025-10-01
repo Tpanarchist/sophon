@@ -11,24 +11,34 @@ from sophon.ops.registry import Op, Registry
 from sophon.core.hypergraph import HyperGraph
 from sophon.core.types import NodeType, EdgeType
 import math
+import logging
+
+logger = logging.getLogger(__name__)
 
 class BookIProp1Op(Op):
     name = "BookI.Prop1"
     cost = 1.0
 
-    def precond(self, graph: HyperGraph) -> List[Tuple[Any, ...]]:
-        # Enumerate all LINEs with two POINTs that have coordinates
-        valid = []
+    def precond(self, graph: HyperGraph) -> List[Tuple[int]]:
+        """Return list of valid (line_id,) tuples for this op."""
+        valid_inputs = []
         lines, _ = graph.by_type(NodeType.LINE)
         for line in lines:
+            logger.debug("PRECOND Checking LINE node %s attr=%s", line.id, line.attr)
             if 'p1' in line.attr and 'p2' in line.attr:
                 p1 = graph.nodes.get(line.attr['p1'])
                 p2 = graph.nodes.get(line.attr['p2'])
+                logger.debug("p1=%s, p2=%s", p1, p2)
                 if (p1 and p2 and
                     'x' in p1.attr and 'y' in p1.attr and
                     'x' in p2.attr and 'y' in p2.attr):
-                    valid.append((line.id,))
-        return valid
+                    logger.debug("Valid input: (%s,)", line.id)
+                    valid_inputs.append((line.id,))
+                else:
+                    logger.debug("Invalid: missing coords")
+            else:
+                logger.debug("Invalid: missing p1/p2")
+        return valid_inputs
 
     def apply(self, graph: HyperGraph, line_id: int) -> dict:
         # Construct equilateral triangle on given segment
