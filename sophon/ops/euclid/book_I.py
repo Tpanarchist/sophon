@@ -91,5 +91,93 @@ class BookIProp1Op(Op):
         except Exception:
             return False
 
+class BookIProp2Op(Op):
+    name = "BookI.Prop2"
+    cost = 1.1
+
+    def precond(self, graph: HyperGraph) -> List[Tuple[int, int]]:
+        """Return list of valid (point1_id, point2_id) tuples for connecting with a line."""
+        valid_inputs = []
+        points, _ = graph.by_type(NodeType.POINT)
+        point_list = list(points)
+        
+        for i, p1 in enumerate(point_list):
+            for j, p2 in enumerate(point_list[i+1:], i+1):
+                if ('x' in p1.attr and 'y' in p1.attr and
+                    'x' in p2.attr and 'y' in p2.attr):
+                    valid_inputs.append((p1.id, p2.id))
+        
+        return valid_inputs[:15]  # Limit combinations
+
+    def apply(self, graph: HyperGraph, p1_id: int, p2_id: int) -> dict:
+        # Connect two points with a line segment
+        line_id = graph.add_node(NodeType.LINE, {'p1': p1_id, 'p2': p2_id})
+        
+        # Add construction edge
+        graph.add_edge(EdgeType.CONSTRUCTION, (p1_id, p2_id, line_id))
+        
+        # Add proposition
+        prop_id = graph.add_node(NodeType.PROPOSITION, {
+            'text': f'Line segment constructed between two points',
+            'status': 'derived'
+        })
+        
+        return {'line': line_id, 'proposition': prop_id}
+
+    def invariants(self, graph: HyperGraph, outputs: dict) -> bool:
+        if not isinstance(outputs, dict):
+            return False
+        try:
+            line = graph.nodes[outputs['line']]
+            return line.type == NodeType.LINE and 'p1' in line.attr and 'p2' in line.attr
+        except Exception:
+            return False
+
+class BookIProp3Op(Op):
+    name = "BookI.Prop3"
+    cost = 0.8
+
+    def precond(self, graph: HyperGraph) -> List[Tuple[int]]:
+        """Return list of valid (point_id,) tuples for creating circles."""
+        valid_inputs = []
+        points, _ = graph.by_type(NodeType.POINT)
+        for point in points:
+            if 'x' in point.attr and 'y' in point.attr:
+                valid_inputs.append((point.id,))
+        return valid_inputs
+
+    def apply(self, graph: HyperGraph, center_id: int) -> dict:
+        # Create a circle centered at the given point
+        center = graph.nodes[center_id]
+        circle_id = graph.add_node(NodeType.CIRCLE, {
+            'center': center_id,
+            'radius': 1.0,  # Default radius
+            'constructed_by': self.name
+        })
+        
+        # Add construction edge
+        graph.add_edge(EdgeType.CONSTRUCTION, (center_id, circle_id))
+        
+        # Add proposition
+        prop_id = graph.add_node(NodeType.PROPOSITION, {
+            'text': f'Circle constructed with given center',
+            'status': 'derived'
+        })
+        
+        return {'circle': circle_id, 'proposition': prop_id}
+
+    def invariants(self, graph: HyperGraph, outputs: dict) -> bool:
+        if not isinstance(outputs, dict):
+            return False
+        try:
+            circle = graph.nodes[outputs['circle']]
+            return (circle.type == NodeType.CIRCLE and 
+                   'center' in circle.attr and 
+                   'radius' in circle.attr)
+        except Exception:
+            return False
+
 REGISTRY = Registry()
 REGISTRY.add(BookIProp1Op())
+REGISTRY.add(BookIProp2Op())
+REGISTRY.add(BookIProp3Op())
